@@ -40,7 +40,7 @@ repositories {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation fileTree(include: ['*.jar'], dir: 'lib')
     implementation("org.scala-lang:scala-library:2.11.12")
     implementation 'com.typesafe.akka:akka-actor_2.11:2.3.4'
     testImplementation group: 'junit', name: 'junit', version: '4.12'
