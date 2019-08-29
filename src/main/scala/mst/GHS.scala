@@ -1,6 +1,5 @@
 package mst
 
-import scala.annotation.migration
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
@@ -75,17 +74,17 @@ class GHS extends Actor {
       this.mst = scala.collection.mutable.ArrayBuffer()
       procs.keys.foreach { nb =>
         val weight = procs(nb)
-        edges += (nb -> new Edge(Basic, weight))
+        edges += (nb -> Edge(Basic, weight))
       }
       this.id = id
       this.state = Sleeping
       sender ! InitActorCompleted()
 
     case Connect(level) =>
-      log.info("Received 'Connect' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Connect' at " + self.path.name + " from " + sender.path.name)
       if (level < this.level) {
         // absorb fragment
-        this.edges(sender) = new Edge(Branch, edges(sender).weight)
+        this.edges(sender) = Edge(Branch, edges(sender).weight)
         sender ! Initiate(this.level, this.id, this.state)
       }
       else if (edges(sender).state == Basic) {
@@ -98,7 +97,7 @@ class GHS extends Actor {
       }
 
     case Initiate(level, id, state) =>
-      log.info("Received 'Initiate' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Initiate' at " + self.path.name + " from " + sender.path.name)
       this.level = level
       this.id = id
       this.state = state
@@ -117,7 +116,7 @@ class GHS extends Actor {
       }
 
     case Test(level, id) =>
-      log.info("Received 'Test' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Test' at " + self.path.name + " from " + sender.path.name)
       if (level > this.level) {
         // process message later
         self tell (Test(level, id), sender)
@@ -125,7 +124,7 @@ class GHS extends Actor {
       else if (id == this.id) {
         // reject
         if (this.edges(sender).state == Basic) {
-          this.edges(sender) = new Edge(Rejected, edges(sender).weight)
+          this.edges(sender) = Edge(Rejected, edges(sender).weight)
         }
         if (sender != this.testEdge) {
           sender ! Reject()
@@ -140,7 +139,7 @@ class GHS extends Actor {
       }
 
     case Accept() =>
-      log.info("Received 'Accept' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Accept' at " + self.path.name + " from " + sender.path.name)
       this.testEdge = null
       if (this.edges(sender).weight < this.bestWeight) {
         this.bestEdge = sender
@@ -149,14 +148,14 @@ class GHS extends Actor {
       report()
 
     case Reject() =>
-      log.info("Received 'Reject' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Reject' at " + self.path.name + " from " + sender.path.name)
       if (this.edges(sender).state == Basic) {
-        this.edges(sender) = new Edge(Rejected, edges(sender).weight)
+        this.edges(sender) = Edge(Rejected, edges(sender).weight)
       }
       test()
 
     case Report(weight) =>
-      log.info("Received 'Report' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'Report' at " + self.path.name + " from " + sender.path.name)
       if (sender != this.parent) {
         if (weight < this.bestWeight) {
           this.bestEdge = sender
@@ -180,11 +179,11 @@ class GHS extends Actor {
       }
 
     case ChangeRoot() =>
-      log.info("Received 'ChangeRoot' at " + self.path.name + " from " + sender.path.name)
+      log.debug("Received 'ChangeRoot' at " + self.path.name + " from " + sender.path.name)
       changeRoot()
 
     case Wakeup() =>
-      log.info("Received 'Wakeup' at " + self.path.name)
+      log.debug("Received 'Wakeup' at " + self.path.name)
 
   }
 
@@ -194,7 +193,7 @@ class GHS extends Actor {
       case None =>
         log.warning("No neighbours found.")
       case Some((minNode, minWeight)) =>
-        this.edges(minNode) = new Edge(Branch, edges(minNode).weight)
+        this.edges(minNode) = Edge(Branch, edges(minNode).weight)
         this.mst += minNode
         log.info("Waked up at " + self.path.name + ", MST is -> " + this.mst.map(a => a.path.name))
         this.level = 0
@@ -210,7 +209,7 @@ class GHS extends Actor {
     }
     else {
       bestEdge ! Connect(this.level)
-      this.edges(bestEdge) = new Edge(Branch, edges(bestEdge).weight)
+      this.edges(bestEdge) = Edge(Branch, edges(bestEdge).weight)
       this.mst += bestEdge
       log.info("Changed root at " + self.path.name + ", MST is -> " + this.mst.map(a => a.path.name))
     }
@@ -288,6 +287,7 @@ object GHSMain extends App {
 
   implicit val timeout = Timeout(5 seconds)
 
+  // graph-mst
   val graph = Map(
     a -> Map((b, 3.0), (c, 6.0), (e, 9.0)),
     b -> Map((a, 3.0), (c, 4.0), (d, 2.0), (f, 9.0), (e, 9.0)),
@@ -312,5 +312,5 @@ object GHSMain extends App {
 
   Thread.sleep(1000)
 
-  system.shutdown()
+  system.terminate()
 }

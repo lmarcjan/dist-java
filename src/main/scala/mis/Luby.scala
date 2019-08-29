@@ -59,7 +59,7 @@ class Luby extends Actor {
       sender ! InitActorCompleted()
 
     case Initiate(round) =>
-      log.info("Initiating round " + round + " at " + self.path.name)
+      log.debug("Initiating round " + round + " at " + self.path.name)
       this.round_no = round
       this.com_proposal_messages.clear()
       this.com_selected_messages.clear()
@@ -75,10 +75,10 @@ class Luby extends Actor {
     case Proposal(proposalVal) =>
       // update messages
       com_proposal_messages(sender) = proposalVal
-      log.info("Received proposal " + proposalVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
+      log.debug("Received proposal " + proposalVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
 
       if (com_proposal_messages.size == com_with.size) { // all messages received
-        log.info("Completed proposal at " + self.path.name + ", round " + this.round_no)
+        log.debug("Completed proposal at " + self.path.name + ", round " + this.round_no)
         var selected = true
         com_proposal_messages.values.foreach { v =>
           if (v >= proposed_val.get) {
@@ -86,7 +86,7 @@ class Luby extends Actor {
           }
         }
         if (selected) {
-          log.info("Node is selected at " + self.path.name + ", round " + this.round_no)
+          log.debug("Node is selected at " + self.path.name + ", round " + this.round_no)
           self ! ChangeState(In)
         }
         com_with.foreach { node =>
@@ -102,16 +102,16 @@ class Luby extends Actor {
     case Selected(selectedVal) =>
       // update messages
       com_selected_messages(sender) = selectedVal
-      log.info("Received selected " + selectedVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
+      log.debug("Received selected " + selectedVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
 
       if (selectedVal) {
         com_selected = true
       }
       if (com_selected_messages.size == com_with.size) { // all messages received
-        log.info("Completed selected at " + self.path.name + ", round " + this.round_no)
+        log.debug("Completed selected at " + self.path.name + ", round " + this.round_no)
         if (com_selected) {
           // node is eliminated
-          log.info("Node is eliminated at " + self.path.name + ", round " + this.round_no)
+          log.debug("Node is eliminated at " + self.path.name + ", round " + this.round_no)
           com_selected_messages.foreach((e: (ActorRef, Boolean)) =>
             if (!e._2) {
               e._1 ! Eliminated(true)
@@ -127,10 +127,10 @@ class Luby extends Actor {
     case Eliminated(eliminatedVal) =>
       // update messages
       com_eliminated_messages(sender) = eliminatedVal
-      log.info("Received eliminated " + eliminatedVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
+      log.debug("Received eliminated " + eliminatedVal + " at " + self.path.name + " from " + sender.path.name + ", round " + this.round_no)
 
       if (com_eliminated_messages.size == com_with.size) { // all messages received
-        log.info("Completed eliminated at " + self.path.name + ", round " + this.round_no)
+        log.debug("Completed eliminated at " + self.path.name + ", round " + this.round_no)
         com_eliminated_messages.foreach((e: (ActorRef, Boolean)) =>
           if (e._2) {
             com_with -= e._1
@@ -162,13 +162,8 @@ object LubyMain extends App {
 
   implicit val timeout = Timeout(5 seconds)
 
+  // graph-mst
   val graph = Map(
-//    a -> List(b, d),
-//    b -> List(a, c),
-//    c -> List(b, d),
-//    d -> List(a, c, e),
-//    e -> List(d))
-
       a -> List(b, c, e),
       b -> List(a, c, d, f, e),
       c -> List(a, b, d, g),
@@ -193,5 +188,5 @@ object LubyMain extends App {
 
   Thread.sleep(10000)
 
-  system.shutdown()
+  system.terminate()
 }

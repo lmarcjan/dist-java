@@ -36,5 +36,5 @@ object MyRandezVousMain extends App {
   b ! InitActor(List(a, c))
   c ! InitActor(List(a, b))
 
-  system.shutdown()
+  system.terminate()
 }
