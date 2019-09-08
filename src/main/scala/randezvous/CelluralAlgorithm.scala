@@ -7,7 +7,7 @@ import java.util.Random
 case class InitActor(neighbourProcs: List[ActorRef])
 case class Probe(v: Integer)
 
-abstract class CellularAlgorithm extends Actor {
+abstract class CellularAlgorithm extends Actor with ActorLogging {
 
   val rnd = new Random()
 

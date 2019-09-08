@@ -11,13 +11,13 @@ case class Hello(response: Boolean)
 class MyRandezVous extends CellularAlgorithm {
 
   def communicate(x: ActorRef) {
-    println("Sending Hello to " + x.path.name + " from " + self.path.name)
+    log.info("Sending Hello to " + x.path.name + " from " + self.path.name)
     x ! Hello(true)
   }
 
   override def receive = super.receive orElse {
     case Hello(response) =>
-      println("Received Hello at " + self.path.name + " from " + sender.path.name)
+      log.info("Received Hello at " + self.path.name + " from " + sender.path.name)
       if (response) {
         sender ! Hello(false)
       }
@@ -35,6 +35,8 @@ object MyRandezVousMain extends App {
   a ! InitActor(List(b, c))
   b ! InitActor(List(a, c))
   c ! InitActor(List(a, b))
+
+  Thread.sleep(10000)
 
   system.terminate()
 }

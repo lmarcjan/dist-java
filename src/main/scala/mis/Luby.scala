@@ -1,19 +1,12 @@
 package mis
 
-import scala.annotation.migration
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.Random
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
-import akka.actor.Props
-import akka.actor.actorRef2Scala
-import akka.event.Logging
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, actorRef2Scala}
 import akka.pattern.ask
 import akka.util.Timeout
-import scala.collection.mutable.ListBuffer
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -35,9 +28,8 @@ case class ChangeState(state: State)
 /**
   * Scala/Akka implementation of Luby distributed maximal independent set algorithm
   */
-class Luby extends Actor {
+class Luby extends Actor with ActorLogging {
 
-  val log = Logging(context.system, this)
   val rnd = new Random()
 
   var neighbours: List[ActorRef] = null

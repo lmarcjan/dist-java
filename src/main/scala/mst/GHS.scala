@@ -3,12 +3,7 @@ package mst
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
-
-import akka.actor.Actor
-import akka.actor.ActorRef
-import akka.actor.ActorSystem
-import akka.actor.Props
-import akka.actor.actorRef2Scala
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, actorRef2Scala}
 import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
@@ -42,9 +37,7 @@ case class ChangeRoot()
 /**
   * Scala/Akka implementation of GHS distributed minimum spanning tree algorithm
   */
-class GHS extends Actor {
-
-  val log = Logging(context.system, this)
+class GHS extends Actor with ActorLogging {
 
   var edges: scala.collection.mutable.Map[ActorRef, Edge] = null
   var mst: scala.collection.mutable.ArrayBuffer[ActorRef] = null
