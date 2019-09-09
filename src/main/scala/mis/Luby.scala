@@ -178,7 +178,7 @@ object LubyMain extends App {
     node ! Initiate(1)
   }
 
-  Thread.sleep(10000)
+  Thread.sleep(timeout.duration.toMillis)
 
   system.terminate()
 }

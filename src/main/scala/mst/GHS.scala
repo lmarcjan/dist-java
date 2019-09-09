@@ -4,7 +4,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, actorRef2Scala}
-import akka.event.Logging
 import akka.pattern.ask
 import akka.util.Timeout
 
@@ -303,7 +302,7 @@ object GHSMain extends App {
   }
   a ! Wakeup()
 
-  Thread.sleep(1000)
+  Thread.sleep(timeout.duration.toMillis)
 
   system.terminate()
 }

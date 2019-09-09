@@ -1,6 +1,8 @@
 package randezvous
 
 import akka.actor._
+import akka.util.Timeout
+import scala.concurrent.duration.DurationInt
 
 // messages
 case class Hello(response: Boolean)
@@ -36,7 +38,9 @@ object MyRandezVousMain extends App {
   b ! InitActor(List(a, c))
   c ! InitActor(List(a, b))
 
-  Thread.sleep(10000)
+  implicit val timeout = Timeout(5 seconds)
+
+  Thread.sleep(timeout.duration.toMillis)
 
   system.terminate()
 }
