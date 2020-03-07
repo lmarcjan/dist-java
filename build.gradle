@@ -20,6 +20,21 @@ apply plugin: 'java'
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        kotlin {
+            srcDirs = ['src/main/kotlin']
+        }
+        scala {
+            srcDirs = ['src/main/scala']
+        }
+    }
+
+}
+
 repositories {
     mavenCentral()
 }
