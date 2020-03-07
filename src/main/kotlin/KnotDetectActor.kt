@@ -10,30 +10,70 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    data class InitActor(val neighbourProcs: List<ActorRef>)
+    class InitActor(val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
+    class GoDetect
+    class CycleBack
+    class ParentBack
+    class SeenBack
 
     class KnotDetectActor : AbstractLoggingActor() {
 
-        private var neighbours: List<ActorRef> = emptyList()
+        private var waiting_from: List<ActorRef> = emptyList()
+        private var in_cycle: List<ActorRef> = emptyList()
+        private var parent: ActorRef? = null
 
         override fun createReceive() =
                 ReceiveBuilder()
                         .match(InitActor::class.java) { handleInitActor(it) }
                         .match(Start::class.java) { handleStart(it) }
+                        .match(GoDetect::class.java) { handleGoDetect(it) }
                         .build()
 
         fun handleInitActor(init: InitActor) {
-            log().debug("Received {}", init)
-            this.neighbours = init.neighbourProcs
+            log().debug("Received init actor at {} from {}", self().path().name(), sender.path().name())
+            this.waiting_from = init.neighbourProcs
             sender.tell(InitActorCompleted(), self())
         }
 
         fun handleStart(start: Start) {
-            log().debug("Received {}", start)
-            log().debug("Neighbours are {}", neighbours)
+            log().info("Received start at {} from {}", self().path().name(), sender.path().name())
+            if (waiting_from.isEmpty()) {
+                log().info("no knot")
+            } else {
+                parent = sender()
+                waiting_from.forEach {
+                    it.tell(GoDetect(), self())
+                }
+            }
         }
+
+        fun handleGoDetect(goDetect: GoDetect) {
+            log().info("Received go detect at {} from {}", self().path().name(), sender.path().name())
+            if (parent == self()) {
+                sender.tell(CycleBack(), self())
+            } else {
+                if (parent == null) {
+                    parent = sender()
+                    if (waiting_from.isEmpty()) {
+                        sender.tell(ParentBack(), self())
+                    } else {
+                        waiting_from.forEach {
+                            it.tell(GoDetect(), self())
+                        }
+                    }
+                } else {
+                    if (in_cycle.isEmpty()) {
+                        sender.tell(CycleBack(), self())
+                    } else {
+                        sender.tell(SeenBack(), self())
+                    }
+                }
+            }
+
+        }
+
     }
 
     val system = ActorSystem.create("KnotDetectSystem")
