@@ -1,28 +1,35 @@
 package mis
 
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
-import scala.util.Random
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, actorRef2Scala}
 import akka.pattern.ask
 import akka.util.Timeout
 
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
+import scala.util.Random
 
 object State extends Enumeration {
   type State = Value
   val Find, In, Out = Value
 }
-import State._
+
+import mis.State._
 
 // messages
 case class InitActor(neighbourProcs: List[ActorRef])
+
 case class InitActorCompleted()
+
 case class Initiate(round: Integer)
+
 case class Proposal(proposalVal: Double)
+
 case class Selected(selectedVal: Boolean)
+
 case class Eliminated(eliminatedVal: Boolean)
+
 case class ChangeState(state: State)
 
 /**
@@ -87,7 +94,7 @@ class Luby extends Actor with ActorLogging {
       }
 
     case ChangeState(state) =>
-      log.info("Returning into " + state + " at " + self.path.name)+ " from " + sender
+      log.info("Returning into " + state + " at " + self.path.name) + " from " + sender
       this.state = state
       context.stop(self)
 
@@ -156,22 +163,22 @@ object LubyMain extends App {
 
   // graph-mst
   val graph = Map(
-      a -> List(b, c, e),
-      b -> List(a, c, d, f, e),
-      c -> List(a, b, d, g),
-      d -> List(b, c, f, g),
-      e -> List(a, b, f, j),
-      f -> List(b, d, e, g, i, j),
-      g -> List(c, d, f, i, h),
-      h -> List(g, i, j),
-      i -> List(f, g, h, j),
-      j -> List(e, f, h, i))
+    a -> List(b, c, e),
+    b -> List(a, c, d, f, e),
+    c -> List(a, b, d, g),
+    d -> List(b, c, f, g),
+    e -> List(a, b, f, j),
+    f -> List(b, d, e, g, i, j),
+    g -> List(c, d, f, i, h),
+    h -> List(g, i, j),
+    i -> List(f, g, h, j),
+    j -> List(e, f, h, i))
 
   // init graph
   graph.foreach {
     case (node, nbs) =>
       val future = node ? InitActor(nbs)
-      val result = Await.result(future, timeout.duration).asInstanceOf[InitActorCompleted]
+      Await.result(future, timeout.duration).asInstanceOf[InitActorCompleted]
   }
 
   graph.keys.foreach { node =>

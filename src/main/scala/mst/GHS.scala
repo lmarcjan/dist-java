@@ -1,36 +1,48 @@
 package mst
 
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
-import scala.language.postfixOps
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, actorRef2Scala}
 import akka.pattern.ask
 import akka.util.Timeout
+
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 
 object NodeState extends Enumeration {
   type NodeState = Value
   val Sleeping, Find, Found = Value
 }
-import NodeState._
+
+import mst.NodeState._
 
 object EdgeState extends Enumeration {
   type EdgeState = Value
   val Basic, Branch, Rejected = Value
 }
-import EdgeState._
+
+import mst.EdgeState._
 
 case class Edge(state: EdgeState, weight: Double)
 
 // messages
 case class InitActor(neighbourProcs: Map[ActorRef, Double], id: Integer)
+
 case class InitActorCompleted()
+
 case class Wakeup()
+
 case class Connect(level: Integer)
+
 case class Initiate(level: Integer, id: Integer, state: NodeState)
+
 case class Test(level: Integer, id: Integer)
+
 case class Accept()
+
 case class Reject()
+
 case class Report(weight: Double)
+
 case class ChangeRoot()
 
 /**
@@ -40,14 +52,14 @@ class GHS extends Actor with ActorLogging {
 
   var edges: scala.collection.mutable.Map[ActorRef, Edge] = null
   var mst: scala.collection.mutable.ArrayBuffer[ActorRef] = null
-  var state : NodeState = null
-  var bestEdge : ActorRef = null
-  var bestWeight : Double = Double.MaxValue
-  var testEdge : ActorRef = null
-  var parent : ActorRef = null
-  var level : Integer = -1
-  var findCount : Integer = -1
-  var id : Integer = null
+  var state: NodeState = null
+  var bestEdge: ActorRef = null
+  var bestWeight: Double = Double.MaxValue
+  var testEdge: ActorRef = null
+  var parent: ActorRef = null
+  var level: Integer = -1
+  var findCount: Integer = -1
+  var id: Integer = null
 
   def receive = {
 
@@ -59,7 +71,7 @@ class GHS extends Actor with ActorLogging {
 
   }
 
-  def handle : Receive = {
+  def handle: Receive = {
 
     case InitActor(procs, id) =>
       this.edges = scala.collection.mutable.Map()
@@ -81,7 +93,7 @@ class GHS extends Actor with ActorLogging {
       }
       else if (edges(sender).state == Basic) {
         // process message later
-        self tell (Connect(level), sender)
+        self tell(Connect(level), sender)
       }
       else {
         // create new fragment
@@ -111,7 +123,7 @@ class GHS extends Actor with ActorLogging {
       log.debug("Received 'Test' at " + self.path.name + " from " + sender.path.name)
       if (level > this.level) {
         // process message later
-        self tell (Test(level, id), sender)
+        self tell(Test(level, id), sender)
       }
       else if (id == this.id) {
         // reject
@@ -159,7 +171,7 @@ class GHS extends Actor with ActorLogging {
       else {
         if (this.state == Find) {
           // process message later
-          self tell (Report(weight), sender)
+          self tell(Report(weight), sender)
         }
         else if (weight > this.bestWeight) {
           changeRoot()
@@ -208,7 +220,7 @@ class GHS extends Actor with ActorLogging {
   }
 
   def report() = {
-    var k : Integer = 0
+    var k: Integer = 0
     edges.keys.foreach { nb =>
       val edge = edges(nb)
       if (edge.state == Branch && nb != this.parent) {
@@ -223,8 +235,8 @@ class GHS extends Actor with ActorLogging {
   }
 
   def test() = {
-    var min : Double = Double.MaxValue
-    var min_nb : ActorRef = null
+    var min: Double = Double.MaxValue
+    var min_nb: ActorRef = null
     edges.keys.foreach { nb =>
       val edge = edges(nb)
       if (edge.state == Basic) {
@@ -244,7 +256,7 @@ class GHS extends Actor with ActorLogging {
     }
   }
 
-  def findMinEdge(): Option[(ActorRef,Double)] = {
+  def findMinEdge(): Option[(ActorRef, Double)] = {
     if (edges.isEmpty) {
       None
     } else {
@@ -257,7 +269,7 @@ class GHS extends Actor with ActorLogging {
           mwoeNode = nb
         }
       }
-      Some(mwoeNode,mwoeWeight)
+      Some(mwoeNode, mwoeWeight)
     }
   }
 
@@ -297,7 +309,7 @@ object GHSMain extends App {
   graph.foreach {
     case (node, nbs) =>
       val future = node ? InitActor(nbs, id)
-      val result = Await.result(future, timeout.duration).asInstanceOf[InitActorCompleted]
+      Await.result(future, timeout.duration).asInstanceOf[InitActorCompleted]
       id += 1
   }
   a ! Wakeup()
