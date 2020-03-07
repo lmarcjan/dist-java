@@ -95,7 +95,7 @@ fun main() {
             log().info("Received parent back at {} from {}", self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             seen.addAll(parentBack.seen)
-            if (in_cycle.isEmpty()) {
+            if (parentBack.in_cycle.isEmpty()) {
                 seen.add(Pair(self(), sender))
             } else {
                 in_cycle.addAll(parentBack.in_cycle)
@@ -108,10 +108,10 @@ fun main() {
                 log().info("Check waiting from at {}", self().path().name())
                 if (parent == self()) {
                     var candidates: MutableList<ActorRef> = mutableListOf()
-                    in_cycle.forEach { k ->
+                    in_cycle.toList().forEach { k ->
                         in_cycle.remove(k)
                         candidates.add(k)
-                        seen.forEach { p ->
+                        seen.toList().forEach { p ->
                             if (p.second == k) {
                                 in_cycle.add(p.first)
                                 seen.remove(p)
