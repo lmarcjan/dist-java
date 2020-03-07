@@ -14,14 +14,15 @@ fun main() {
     class InitActorCompleted
     class Start
     class GoDetect
-    class CycleBack
-    class ParentBack
     class SeenBack
+    class CycleBack
+    class ParentBack(val seen: List<ActorRef>, val in_cycle: List<ActorRef>)
 
     class KnotDetectActor : AbstractLoggingActor() {
 
-        private var waiting_from: List<ActorRef> = emptyList()
-        private var in_cycle: List<ActorRef> = emptyList()
+        private var waiting_from: MutableList<ActorRef> = mutableListOf()
+        private var in_cycle: MutableList<ActorRef> = mutableListOf()
+        private var seen: MutableList<ActorRef> = mutableListOf()
         private var parent: ActorRef? = null
 
         override fun createReceive() =
@@ -29,11 +30,14 @@ fun main() {
                         .match(InitActor::class.java) { handleInitActor(it) }
                         .match(Start::class.java) { handleStart(it) }
                         .match(GoDetect::class.java) { handleGoDetect(it) }
+                        .match(SeenBack::class.java) { handleSeenBack(it) }
+                        .match(CycleBack::class.java) { handleCycleBack(it) }
+                        .match(ParentBack::class.java) { handleParentBack(it) }
                         .build()
 
         fun handleInitActor(init: InitActor) {
             log().debug("Received init actor at {} from {}", self().path().name(), sender.path().name())
-            this.waiting_from = init.neighbourProcs
+            this.waiting_from = init.neighbourProcs.toMutableList()
             sender.tell(InitActorCompleted(), self())
         }
 
@@ -57,7 +61,7 @@ fun main() {
                 if (parent == null) {
                     parent = sender()
                     if (waiting_from.isEmpty()) {
-                        sender.tell(ParentBack(), self())
+                        sender.tell(ParentBack(seen, in_cycle), self())
                     } else {
                         waiting_from.forEach {
                             it.tell(GoDetect(), self())
@@ -71,8 +75,46 @@ fun main() {
                     }
                 }
             }
-
         }
+
+        fun handleSeenBack(seenBack: SeenBack) {
+            log().info("Received seen back at {} from {}", self().path().name(), sender.path().name())
+            waiting_from.remove(sender)
+            seen.add(sender)
+        }
+
+        fun handleCycleBack(cycleBack: CycleBack) {
+            log().info("Received cycle back at {} from {}", self().path().name(), sender.path().name())
+            waiting_from.remove(sender)
+            in_cycle.add(sender)
+            check_waiting_from()
+        }
+
+        fun handleParentBack(parentBack: ParentBack) {
+            log().info("Received parent back at {} from {}", self().path().name(), sender.path().name())
+            waiting_from.remove(sender)
+            seen.addAll(parentBack.seen)
+            if (in_cycle.isEmpty()) {
+                seen.add(sender)
+            } else {
+                in_cycle.addAll(parentBack.in_cycle)
+            }
+            check_waiting_from()
+        }
+
+        fun check_waiting_from() {
+            if (waiting_from.isEmpty()) {
+                log().info("Check waiting from at {}", self().path().name())
+                if (parent == self()) {
+                    var candidates: MutableList<ActorRef> = mutableListOf()
+                    in_cycle.forEach {
+                        candidates.add(it)
+                    }
+                    // TODO
+                }
+            }
+        }
+
 
     }
 
