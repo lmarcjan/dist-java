@@ -16,13 +16,13 @@ fun main() {
     class GoDetect
     class SeenBack
     class CycleBack
-    class ParentBack(val seen: List<ActorRef>, val in_cycle: List<ActorRef>)
+    class ParentBack(val seen: List<Pair<ActorRef, ActorRef>>, val in_cycle: List<ActorRef>)
 
     class KnotDetectActor : AbstractLoggingActor() {
 
         private var waiting_from: MutableList<ActorRef> = mutableListOf()
         private var in_cycle: MutableList<ActorRef> = mutableListOf()
-        private var seen: MutableList<ActorRef> = mutableListOf()
+        private var seen: MutableList<Pair<ActorRef, ActorRef>> = mutableListOf()
         private var parent: ActorRef? = null
 
         override fun createReceive() =
@@ -44,9 +44,9 @@ fun main() {
         fun handleStart(start: Start) {
             log().info("Received start at {} from {}", self().path().name(), sender.path().name())
             if (waiting_from.isEmpty()) {
-                log().info("no knot")
+                log().info("no knot at {}", self().path().name())
             } else {
-                parent = sender()
+                parent = self()
                 waiting_from.forEach {
                     it.tell(GoDetect(), self())
                 }
@@ -77,16 +77,17 @@ fun main() {
             }
         }
 
-        fun handleSeenBack(seenBack: SeenBack) {
-            log().info("Received seen back at {} from {}", self().path().name(), sender.path().name())
-            waiting_from.remove(sender)
-            seen.add(sender)
-        }
-
         fun handleCycleBack(cycleBack: CycleBack) {
             log().info("Received cycle back at {} from {}", self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             in_cycle.add(sender)
+            check_waiting_from()
+        }
+
+        fun handleSeenBack(seenBack: SeenBack) {
+            log().info("Received seen back at {} from {}", self().path().name(), sender.path().name())
+            waiting_from.remove(sender)
+            seen.add(Pair(self, sender))
             check_waiting_from()
         }
 
@@ -95,7 +96,7 @@ fun main() {
             waiting_from.remove(sender)
             seen.addAll(parentBack.seen)
             if (in_cycle.isEmpty()) {
-                seen.add(sender)
+                seen.add(Pair(self(), sender))
             } else {
                 in_cycle.addAll(parentBack.in_cycle)
             }
@@ -107,14 +108,29 @@ fun main() {
                 log().info("Check waiting from at {}", self().path().name())
                 if (parent == self()) {
                     var candidates: MutableList<ActorRef> = mutableListOf()
-                    in_cycle.forEach {
-                        candidates.add(it)
+                    in_cycle.forEach { k ->
+                        in_cycle.remove(k)
+                        candidates.add(k)
+                        seen.forEach { p ->
+                            if (p.second == k) {
+                                in_cycle.add(p.first)
+                                seen.remove(p)
+                            }
+                        }
                     }
-                    // TODO
+                    if (seen.isEmpty()) {
+                        log().info("knot at {} with {}", self().path().name(), candidates.map { c -> c.path().name() })
+                    } else {
+                        log().info("no knot at {}", self().path().name())
+                    }
+                } else {
+                    if (!in_cycle.isEmpty()) {
+                        in_cycle.add(self())
+                    }
+                    parent!!.tell(ParentBack(seen, in_cycle), self())
                 }
             }
         }
-
 
     }
 
