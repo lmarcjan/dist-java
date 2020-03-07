@@ -68,7 +68,7 @@ fun main() {
                         }
                     }
                 } else {
-                    if (in_cycle.isEmpty()) {
+                    if (!in_cycle.isEmpty()) {
                         sender.tell(CycleBack(), self())
                     } else {
                         sender.tell(SeenBack(), self())
