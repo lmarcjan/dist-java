@@ -68,7 +68,7 @@ fun main() {
                         }
                     }
                 } else {
-                    if (!in_cycle.isEmpty()) {
+                    if (in_cycle.isNotEmpty()) {
                         sender.tell(CycleBack(), self())
                     } else {
                         sender.tell(SeenBack(), self())
@@ -124,10 +124,10 @@ fun main() {
                         log().info("no knot at {}", self().path().name())
                     }
                 } else {
-                    if (!in_cycle.isEmpty()) {
+                    if (in_cycle.isNotEmpty()) {
                         in_cycle.add(self())
                     }
-                    parent!!.tell(ParentBack(seen, in_cycle), self())
+                    parent?.tell(ParentBack(seen, in_cycle), self())
                 }
             }
         }
