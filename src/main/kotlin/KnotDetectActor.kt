@@ -6,6 +6,7 @@ import akka.japi.pf.ReceiveBuilder
 import akka.pattern.Patterns.ask
 import akka.util.Timeout
 import scala.concurrent.Await
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 fun main() {
@@ -135,40 +136,29 @@ fun main() {
     }
 
     val system = ActorSystem.create("KnotDetectSystem")
-    val a1 = system.actorOf(Props.create(KnotDetectActor::class.java), "1")
-    val a2 = system.actorOf(Props.create(KnotDetectActor::class.java), "2")
-    val a3 = system.actorOf(Props.create(KnotDetectActor::class.java), "3")
-    val a4 = system.actorOf(Props.create(KnotDetectActor::class.java), "4")
-    val a5 = system.actorOf(Props.create(KnotDetectActor::class.java), "5")
-    val a6 = system.actorOf(Props.create(KnotDetectActor::class.java), "6")
-    val a7 = system.actorOf(Props.create(KnotDetectActor::class.java), "7")
-    val a8 = system.actorOf(Props.create(KnotDetectActor::class.java), "8")
-    val a9 = system.actorOf(Props.create(KnotDetectActor::class.java), "9")
-    val a10 = system.actorOf(Props.create(KnotDetectActor::class.java), "10")
-    val a11 = system.actorOf(Props.create(KnotDetectActor::class.java), "11")
+    val adj = GraphUtil.readGraphMatrixAsAdj(File(KnotDetectActor::class.java.getResource("graph-knot-detect-example.graph").file))
+    val n = adj.size
+    val actors = mutableMapOf<Int, ActorRef>()
+    for (i in 1 until n) {
+        val actor = system.actorOf(Props.create(KnotDetectActor::class.java), "" + i)
+        actors.put(i, actor)
+    }
+
+    val graph = mutableMapOf<ActorRef, List<ActorRef>>()
+    for ((i, actorRef) in actors) {
+        val actorAdj = adj.get(i - 1).map { actors.get(it + 1) }.filterNotNull()
+        graph.put(actorRef, actorAdj)
+    }
+
 
     val timeout = Timeout(5, TimeUnit.SECONDS)
-
-    val graph = mapOf(
-            a1 to listOf(a6),
-            a2 to listOf(a1, a3),
-            a3 to listOf(a5),
-            a4 to listOf(a2, a3),
-            a5 to listOf(a8),
-            a6 to listOf(a3, a5, a9),
-            a7 to listOf(a4, a8),
-            a8 to listOf(a6),
-            a9 to listOf(a5, a8),
-            a10 to listOf(a7, a8),
-            a11 to listOf(a6, a10)
-    )
 
     graph.forEach { node, nbs ->
         val future = ask(node, InitActor(nbs), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
     }
 
-    a6.tell(Start(), ActorRef.noSender())
+    actors.get(6)?.tell(Start(), ActorRef.noSender())
 
     Thread.sleep(timeout.duration().toMillis())
 
