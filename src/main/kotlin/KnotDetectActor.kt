@@ -43,10 +43,11 @@ fun main() {
         }
 
         fun handleStart(start: Start) {
-            log().info("Received start at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received start at {} from {}", self().path().name(), sender.path().name())
             if (waiting_from.isEmpty()) {
-                log().info("no knot at {}", self().path().name())
+                log().info("No knot at {}", self().path().name())
             } else {
+                log().debug("Setting root at {}", self().path().name())
                 parent = self()
                 waiting_from.forEach {
                     it.tell(GoDetect(), self())
@@ -55,11 +56,12 @@ fun main() {
         }
 
         fun handleGoDetect(goDetect: GoDetect) {
-            log().info("Received go detect at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received go detect at {} from {}", self().path().name(), sender.path().name())
             if (parent == self()) {
                 sender.tell(CycleBack(), self())
             } else {
                 if (parent == null) {
+                    log().debug("Setting parent at {} from {}", self().path().name(), sender.path().name())
                     parent = sender()
                     if (waiting_from.isEmpty()) {
                         sender.tell(ParentBack(seen, in_cycle), self())
@@ -79,21 +81,21 @@ fun main() {
         }
 
         fun handleCycleBack(cycleBack: CycleBack) {
-            log().info("Received cycle back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received cycle back at {} from {}", self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             in_cycle.add(sender)
             check_waiting_from()
         }
 
         fun handleSeenBack(seenBack: SeenBack) {
-            log().info("Received seen back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received seen back at {} from {}", self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             seen.add(Pair(self, sender))
             check_waiting_from()
         }
 
         fun handleParentBack(parentBack: ParentBack) {
-            log().info("Received parent back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received parent back at {} from {}", self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             seen.addAll(parentBack.seen)
             if (parentBack.in_cycle.isEmpty()) {
@@ -106,7 +108,7 @@ fun main() {
 
         fun check_waiting_from() {
             if (waiting_from.isEmpty()) {
-                log().info("Check waiting from at {}", self().path().name())
+                log().debug("Check waiting from at {}", self().path().name())
                 if (parent == self()) {
                     var candidates: MutableList<ActorRef> = mutableListOf()
                     in_cycle.toList().forEach { k ->
@@ -120,9 +122,9 @@ fun main() {
                         }
                     }
                     if (seen.isEmpty()) {
-                        log().info("knot at {} with {}", self().path().name(), candidates.map { c -> c.path().name() })
+                        log().info("Knot at {} with {}", self().path().name(), candidates.map { c -> c.path().name() })
                     } else {
-                        log().info("no knot at {}", self().path().name())
+                        log().info("No knot at {}", self().path().name())
                     }
                 } else {
                     if (in_cycle.isNotEmpty()) {
