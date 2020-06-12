@@ -72,17 +72,17 @@ fun main() {
     }
 
     val system = ActorSystem.create("BfsSystem")
-    val adj = GraphUtil.readGraphMatrixAsAdj(File(BfsDetectActor::class.java.getResource("graph-knot-detect-example.graph").file))
+    val adj = GraphUtil.readGraphAdj(File(BfsDetectActor::class.java.getResource("graph-floyd-warshall.adj").file))
     val n = adj.size
     val actors = mutableMapOf<Int, ActorRef>()
-    for (i in 1 until n) {
+    for (i in 0 until n) {
         val actor = system.actorOf(Props.create(BfsDetectActor::class.java), "" + i)
         actors.put(i, actor)
     }
 
     val graph = mutableMapOf<ActorRef, List<ActorRef>>()
     for ((i, actorRef) in actors) {
-        val actorAdj = adj.get(i - 1).map { actors.get(it + 1) }.filterNotNull()
+        val actorAdj = adj.get(i).map { actors.get(it) }.filterNotNull()
         graph.put(actorRef, actorAdj)
     }
 
@@ -94,7 +94,7 @@ fun main() {
         Await.result(future, timeout.duration())
     }
 
-    actors.get(6)?.tell(Start(), ActorRef.noSender())
+    actors.get(0)?.tell(Start(), ActorRef.noSender())
 
     Thread.sleep(timeout.duration().toMillis())
 

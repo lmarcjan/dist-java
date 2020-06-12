@@ -14,7 +14,7 @@ public class FloydWarshall extends Algorithm {
     private Double[][] weight;
 
     public FloydWarshall() {
-        weight = GraphUtil.readWeightedGraphMatrix(new File(FloydWarshall.class.getResource("graph-floyd-warshall-example.graph").getFile()));
+        weight = GraphUtil.readWeightedGraphMatrix(new File(FloydWarshall.class.getResource("graph-floyd-warshall.matrix").getFile()));
     }
 
 
