@@ -19,7 +19,7 @@ fun main() {
 
     class BfsActor : AbstractLoggingActor() {
 
-        private var waiting_from: MutableList<ActorRef> = mutableListOf()
+        private lateinit var waiting_from: MutableList<ActorRef>
         private var parent: ActorRef? = null
 
         override fun createReceive() =

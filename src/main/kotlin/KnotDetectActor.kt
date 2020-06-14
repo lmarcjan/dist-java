@@ -21,7 +21,7 @@ fun main() {
 
     class KnotDetectActor : AbstractLoggingActor() {
 
-        private var waiting_from: MutableList<ActorRef> = mutableListOf()
+        private lateinit var waiting_from: MutableList<ActorRef>
         private var in_cycle: MutableList<ActorRef> = mutableListOf()
         private var seen: MutableList<Pair<ActorRef, ActorRef>> = mutableListOf()
         private var parent: ActorRef? = null
