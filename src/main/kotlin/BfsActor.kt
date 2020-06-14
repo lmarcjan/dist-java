@@ -17,7 +17,7 @@ fun main() {
     class GoDetect
     class ParentBack
 
-    class BfsDetectActor : AbstractLoggingActor() {
+    class BfsActor : AbstractLoggingActor() {
 
         private var waiting_from: MutableList<ActorRef> = mutableListOf()
         private var parent: ActorRef? = null
@@ -72,11 +72,11 @@ fun main() {
     }
 
     val system = ActorSystem.create("BfsSystem")
-    val adj = GraphUtil.readGraphAdj(File(BfsDetectActor::class.java.getResource("graph-floyd-warshall.adj").file))
+    val adj = GraphUtil.readGraphAdj(File(BfsActor::class.java.getResource("graph-floyd-warshall.adj").file))
     val n = adj.size
     val actors = mutableMapOf<Int, ActorRef>()
     for (i in 0 until n) {
-        val actor = system.actorOf(Props.create(BfsDetectActor::class.java), "" + i)
+        val actor = system.actorOf(Props.create(BfsActor::class.java), "" + i)
         actors.put(i, actor)
     }
 
