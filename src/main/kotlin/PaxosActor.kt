@@ -10,70 +10,120 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    data class Proposal(val epoch: Int, val value: Int)
-    data class InitActor(val id: Int, val neighbourProcs: List<ActorRef>)
+    data class InitActor(val id: Int, val neighbourProcs: List<ActorRef>, val n: Int)
     class InitActorCompleted
     class Start
-    data class Prepare(val proposal: Proposal)
-    data class PrepareResponse(val proposal: Proposal)
+    data class PrepareRequest(val time: Int, val value: Int)
+    data class PrepareResponse(val time: Int, val value: Int)
+    data class AcceptRequest(val time: Int, val value: Int)
+    data class Accepted(val value: Int)
 
     class PaxosActor : AbstractLoggingActor() {
 
+        private var n: Int = 0
         private lateinit var acceptors: List<ActorRef>
         private lateinit var learners: List<ActorRef>
-        private var id: Int = 0
-        private var currentEpoch: Int = 0
-        private var currentProposal: Proposal? = null
+
+        private var proposerValue: Int = -1
+        private var proposerTime: Int = -1
+        private var proposerResponseCount: Int = 0
+        private var proposerResponseValue: Int = -1
+        private var proposerResponseTime: Int = -1
+        private var proposerAcceptRequested = false;
+        private var acceptorTime: Int = -1
+        private var acceptorValue: Int = -1
+        private var learnerAcceptedCount: Int = 0
+        private var learnerAcceptedValue: Int = -1
+        private var learnerFinished = false;
 
         override fun createReceive() =
                 ReceiveBuilder()
                         .match(InitActor::class.java) { handleInitActor(it) }
                         .match(Start::class.java) { handleStart(it) }
-                        .match(Prepare::class.java) { handlePrepare(it) }
+                        .match(PrepareRequest::class.java) { handlePrepareRequest(it) }
                         .match(PrepareResponse::class.java) { handlePrepareResponse(it) }
+                        .match(AcceptRequest::class.java) { handleAcceptRequest(it) }
+                        .match(Accepted::class.java) { handleAccepted(it) }
                         .build()
 
         fun handleInitActor(init: InitActor) {
             log().debug("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
-            this.id = init.id
-            this.acceptors = init.neighbourProcs
-            this.learners = init.neighbourProcs
+            n = init.n
+            acceptors = init.neighbourProcs
+            learners = init.neighbourProcs
+            proposerTime = 0
+            proposerValue = (1..n).random()
             sender.tell(InitActorCompleted(), self())
         }
 
         fun handleStart(start: Start) {
             log().debug("Received start {} at {} from {}", start, self().path().name(), sender.path().name())
             acceptors.forEach {
-                it.tell(Prepare(Proposal(currentEpoch, id)), self())
+                it.tell(PrepareRequest(proposerTime, proposerValue), self())
             }
         }
 
-        fun handlePrepare(prepare: Prepare) {
-            log().debug("Received prepare {} at {} from {}", prepare, self().path().name(), sender.path().name())
-            if (prepare.proposal.epoch < currentEpoch) {
+        fun handlePrepareRequest(prepareRequest: PrepareRequest) {
+            log().debug("Received prepare request {} at {} from {}", prepareRequest, self().path().name(), sender.path().name())
+            if (prepareRequest.time < acceptorTime) {
                 // ignore
             } else {
-                if (currentProposal != null) {
-                    sender.tell(PrepareResponse(currentProposal!!), self())
-                    if (prepare.proposal.epoch > currentEpoch) {
-                        currentProposal = prepare.proposal
+                if (acceptorTime != -1) {
+                    sender.tell(PrepareResponse(acceptorTime, acceptorValue), self())
+                    if (prepareRequest.time > acceptorTime) {
+                        acceptorValue = prepareRequest.value
                     }
                 } else {
-                    sender.tell(PrepareResponse(prepare.proposal), self())
-                    currentProposal = prepare.proposal
+                    sender.tell(PrepareResponse(prepareRequest.time, prepareRequest.value), self())
+                    acceptorValue = prepareRequest.value
                 }
-                currentEpoch = Math.max(currentEpoch, prepare.proposal.epoch)
+                acceptorTime = prepareRequest.time
             }
         }
 
         fun handlePrepareResponse(prepareResponse: PrepareResponse) {
             log().debug("Received prepare response {} at {} from {}", prepareResponse, self().path().name(), sender.path().name())
-            // TODO
+            if (prepareResponse.time < proposerResponseTime) {
+                // ignore
+            } else {
+                proposerResponseCount++
+                proposerResponseValue = prepareResponse.value
+                proposerResponseTime = prepareResponse.time
+                if (!proposerAcceptRequested && proposerResponseCount >= n / 2) {
+                    acceptors.forEach {
+                        it.tell(AcceptRequest(proposerResponseTime, proposerResponseValue), self())
+                    }
+                    proposerAcceptRequested = true
+                }
+            }
         }
+
+        fun handleAcceptRequest(acceptRequest: AcceptRequest) {
+            log().debug("Received accept request {} at {} from {}", acceptRequest, self().path().name(), sender.path().name())
+            if (acceptRequest.time < acceptorTime) {
+                // ignore
+            } else {
+                learners.forEach {
+                    it.tell(Accepted(proposerResponseValue), self())
+                }
+            }
+        }
+
+        fun handleAccepted(accepted: Accepted) {
+            log().debug("Received accepted {} at {} from {}", accepted, self().path().name(), sender.path().name())
+            learnerAcceptedCount++
+            learnerAcceptedValue = accepted.value
+            if (!learnerFinished && learnerAcceptedCount >= n / 2) {
+                log().info("Learnerd value {} at {}", learnerAcceptedValue, self().path().name())
+                learnerFinished = true
+            }
+        }
+
+
     }
 
     val system = ActorSystem.create("PaxosSystem")
-    val n = 10
+    val n = 12
     val actors = mutableMapOf<Int, ActorRef>()
     for (i in 1 until n + 1) {
         val actor = system.actorOf(Props.create(PaxosActor::class.java), "" + i)
@@ -82,7 +132,7 @@ fun main() {
 
     val graph = mutableMapOf<ActorRef, List<ActorRef>>()
     for ((i, actorRef) in actors) {
-        val actorAdj = 1.rangeTo(n).map { actors.get(it + 1) }.filterNotNull()
+        val actorAdj = 0.rangeTo(n).map { actors.get(it + 1) }.filterNotNull()
         graph.put(actorRef, actorAdj)
     }
 
@@ -90,7 +140,7 @@ fun main() {
     val timeout = Timeout(5, TimeUnit.SECONDS)
 
     graph.forEach { node, nbs ->
-        val future = ask(node, InitActor(node.path().name().toInt(), nbs), timeout.duration().toMillis())
+        val future = ask(node, InitActor(node.path().name().toInt(), nbs, n), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
     }
 
