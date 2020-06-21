@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    class InitActor(val neighbourProcs: List<ActorRef>)
+    data class InitActor(val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
     class GoDetect
@@ -31,13 +31,13 @@ fun main() {
                         .build()
 
         fun handleInitActor(init: InitActor) {
-            log().debug("Received init actor at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
             this.waiting_from = init.neighbourProcs.toMutableList()
             sender.tell(InitActorCompleted(), self())
         }
 
         fun handleStart(start: Start) {
-            log().debug("Received start at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received start {} at {} from {}", start, self().path().name(), sender.path().name())
             if (parent != null) {
                 log().debug("Ignoring start at {}", self().path().name())
             } else {
@@ -50,7 +50,7 @@ fun main() {
         }
 
         fun handleGoDetect(goDetect: GoDetect) {
-            log().debug("Received go detect at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received go detect {} at {} from {}", goDetect, self().path().name(), sender.path().name())
             if (parent == null) {
                 log().info("Setting parent at {} from {}", self().path().name(), sender.path().name())
                 parent = sender()
@@ -65,7 +65,7 @@ fun main() {
         }
 
         fun handleParentBack(parentBack: ParentBack) {
-            log().debug("Received parent back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received parent back {} at {} from {}", parentBack, self().path().name(), sender.path().name())
             waiting_from.remove(sender)
         }
 

@@ -11,13 +11,13 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    class InitActor(val neighbourProcs: List<ActorRef>)
+    data class InitActor(val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
     class GoDetect
     class SeenBack
     class CycleBack
-    class ParentBack(val seen: List<Pair<ActorRef, ActorRef>>, val in_cycle: List<ActorRef>)
+    data class ParentBack(val seen: List<Pair<ActorRef, ActorRef>>, val in_cycle: List<ActorRef>)
 
     class KnotDetectActor : AbstractLoggingActor() {
 
@@ -37,13 +37,13 @@ fun main() {
                         .build()
 
         fun handleInitActor(init: InitActor) {
-            log().debug("Received init actor at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
             this.waiting_from = init.neighbourProcs.toMutableList()
             sender.tell(InitActorCompleted(), self())
         }
 
         fun handleStart(start: Start) {
-            log().debug("Received start at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received start {} at {} from {}", start, self().path().name(), sender.path().name())
             if (waiting_from.isEmpty()) {
                 log().info("No knot at {}", self().path().name())
             } else {
@@ -56,7 +56,7 @@ fun main() {
         }
 
         fun handleGoDetect(goDetect: GoDetect) {
-            log().debug("Received go detect at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received go detect {} at {} from {}", goDetect, self().path().name(), sender.path().name())
             if (parent == self()) {
                 sender.tell(CycleBack(), self())
             } else {
@@ -81,21 +81,21 @@ fun main() {
         }
 
         fun handleCycleBack(cycleBack: CycleBack) {
-            log().debug("Received cycle back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received cycle back {} at {} from {}", cycleBack, self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             in_cycle.add(sender)
             check_waiting_from()
         }
 
         fun handleSeenBack(seenBack: SeenBack) {
-            log().debug("Received seen back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received seen back {} at {} from {}", seenBack, self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             seen.add(Pair(self, sender))
             check_waiting_from()
         }
 
         fun handleParentBack(parentBack: ParentBack) {
-            log().debug("Received parent back at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received parent back {} at {} from {}", parentBack, self().path().name(), sender.path().name())
             waiting_from.remove(sender)
             seen.addAll(parentBack.seen)
             if (parentBack.in_cycle.isEmpty()) {

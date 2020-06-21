@@ -10,27 +10,31 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    class InitActor(val id: Int, val neighbourProcs: List<ActorRef>)
+    data class Proposal(val epoch: Int, val value: Int)
+    data class InitActor(val id: Int, val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
-    class Proposal(val epoch: Int, val v: Int)
+    data class Prepare(val proposal: Proposal)
+    data class PrepareResponse(val proposal: Proposal)
 
     class PaxosActor : AbstractLoggingActor() {
 
         private lateinit var acceptors: List<ActorRef>
         private lateinit var learners: List<ActorRef>
         private var id: Int = 0
-        private var epoch: Int = 0
+        private var currentEpoch: Int = 0
+        private var currentProposal: Proposal? = null
 
         override fun createReceive() =
                 ReceiveBuilder()
                         .match(InitActor::class.java) { handleInitActor(it) }
                         .match(Start::class.java) { handleStart(it) }
-                        .match(Proposal::class.java) { handleProposal(it) }
+                        .match(Prepare::class.java) { handlePrepare(it) }
+                        .match(PrepareResponse::class.java) { handlePrepareResponse(it) }
                         .build()
 
         fun handleInitActor(init: InitActor) {
-            log().debug("Received init actor at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
             this.id = init.id
             this.acceptors = init.neighbourProcs
             this.learners = init.neighbourProcs
@@ -38,21 +42,37 @@ fun main() {
         }
 
         fun handleStart(start: Start) {
-            log().debug("Received start at {} from {}", self().path().name(), sender.path().name())
+            log().debug("Received start {} at {} from {}", start, self().path().name(), sender.path().name())
             acceptors.forEach {
-                it.tell(Proposal(epoch, id), self())
+                it.tell(Prepare(Proposal(currentEpoch, id)), self())
             }
-
         }
 
-        fun handleProposal(proposal: Proposal) {
-            log().info("Received proposal {} at {} from {}", proposal.v, self().path().name(), sender.path().name())
+        fun handlePrepare(prepare: Prepare) {
+            log().debug("Received prepare {} at {} from {}", prepare, self().path().name(), sender.path().name())
+            if (prepare.proposal.epoch < currentEpoch) {
+                // ignore
+            } else {
+                if (currentProposal != null) {
+                    sender.tell(PrepareResponse(currentProposal!!), self())
+                    if (prepare.proposal.epoch > currentEpoch) {
+                        currentProposal = prepare.proposal
+                    }
+                } else {
+                    sender.tell(PrepareResponse(prepare.proposal), self())
+                    currentProposal = prepare.proposal
+                }
+                currentEpoch = Math.max(currentEpoch, prepare.proposal.epoch)
+            }
+        }
+
+        fun handlePrepareResponse(prepareResponse: PrepareResponse) {
+            log().debug("Received prepare response {} at {} from {}", prepareResponse, self().path().name(), sender.path().name())
             // TODO
         }
-
     }
 
-    val system = ActorSystem.create("BfsSystem")
+    val system = ActorSystem.create("PaxosSystem")
     val n = 10
     val actors = mutableMapOf<Int, ActorRef>()
     for (i in 1 until n + 1) {
