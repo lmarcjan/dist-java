@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
+    // messages
     data class InitActor(val id: Int, val neighbourProcs: List<ActorRef>, val n: Int)
     class InitActorCompleted
     class Start
@@ -17,6 +18,9 @@ fun main() {
     data class PrepareResponse(val time: Int, val value: Int)
     data class AcceptRequest(val time: Int, val value: Int)
     data class Accepted(val value: Int)
+
+    // message timeout
+    val timeout = Timeout(5, TimeUnit.SECONDS)
 
     class PaxosActor : AbstractLoggingActor() {
 
@@ -136,11 +140,9 @@ fun main() {
         graph.put(actorRef, actorAdj)
     }
 
-
-    val timeout = Timeout(5, TimeUnit.SECONDS)
-
     graph.forEach { node, nbs ->
-        val future = ask(node, InitActor(node.path().name().toInt(), nbs, n), timeout.duration().toMillis())
+        val nodeId = node.path().name().toInt()
+        val future = ask(node, InitActor(nodeId, nbs, n), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
     }
 

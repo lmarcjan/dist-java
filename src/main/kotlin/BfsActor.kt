@@ -11,11 +11,15 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
+    // messages
     data class InitActor(val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
     class GoDetect
     class ParentBack
+
+    // message timeout
+    val timeout = Timeout(5, TimeUnit.SECONDS)
 
     class BfsActor : AbstractLoggingActor() {
 
@@ -85,9 +89,6 @@ fun main() {
         val actorAdj = adj.get(i).map { actors.get(it) }.filterNotNull()
         graph.put(actorRef, actorAdj)
     }
-
-
-    val timeout = Timeout(5, TimeUnit.SECONDS)
 
     graph.forEach { node, nbs ->
         val future = ask(node, InitActor(nbs), timeout.duration().toMillis())

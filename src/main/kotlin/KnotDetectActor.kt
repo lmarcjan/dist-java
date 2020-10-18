@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
+    // messages
     data class InitActor(val neighbourProcs: List<ActorRef>)
     class InitActorCompleted
     class Start
@@ -18,6 +19,9 @@ fun main() {
     class SeenBack
     class CycleBack
     data class ParentBack(val seen: List<Pair<ActorRef, ActorRef>>, val in_cycle: List<ActorRef>)
+
+    // message timeout
+    val timeout = Timeout(5, TimeUnit.SECONDS)
 
     class KnotDetectActor : AbstractLoggingActor() {
 
@@ -151,10 +155,7 @@ fun main() {
         val actorAdj = adj.get(i - 1).map { actors.get(it + 1) }.filterNotNull()
         graph.put(actorRef, actorAdj)
     }
-
-
-    val timeout = Timeout(5, TimeUnit.SECONDS)
-
+    
     graph.forEach { node, nbs ->
         val future = ask(node, InitActor(nbs), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
