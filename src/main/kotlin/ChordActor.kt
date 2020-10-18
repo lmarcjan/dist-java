@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 fun main() {
 
     // messages
-    data class InitActor(val id: Int, val allActors: List<ActorRef>)
+    data class InitActor(val allActors: List<ActorRef>)
     class InitActorCompleted
     data class InitRing(val prdc: ActorRef, val succList: List<ActorRef>)
     class InitRingCompleted
@@ -26,7 +26,7 @@ fun main() {
     class ChordActor : AbstractLoggingActor() {
 
         private lateinit var allActors: MutableList<ActorRef>
-        private var id: Int = 0
+        private var id: Int = getId(self())
         private var prdc: ActorRef? = null
         private lateinit var succList: MutableList<ActorRef>
 
@@ -35,14 +35,19 @@ fun main() {
                         .match(InitActor::class.java) { handleInitActor(it) }
                         .match(InitRing::class.java) { handleInitRing(it) }
                         .match(Join::class.java) { handleJoin(it) }
+                        .match(JoinAccepted::class.java) { handleJoinAccepted(it) }
                         .match(InitJoin::class.java) { handleInitJoin(it) }
                         .match(Fail::class.java) { handleFail(it) }
                         .build()
 
+        private fun handleJoinAccepted(joinAccepted: JoinAccepted) {
+            log().info("Join accepted at {} from {}", self().path().name(), sender.path().name())
+            this.prdc = sender
+        }
+
         fun handleInitActor(init: InitActor) {
             log().debug("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
             this.allActors = init.allActors.toMutableList()
-            this.id = init.id
             sender.tell(InitActorCompleted(), self())
         }
 
@@ -53,8 +58,7 @@ fun main() {
         }
 
         private fun handleJoin(join: Join) {
-            if (inRing() && between(id, join.id, succList.get(0).path().name().toInt())) {
-                log().info("Join accepted at {} from {}", self().path().name(), sender.path().name())
+            if (inRing() && between(id, join.id, getId(succList.get(0)))) {
                 sender.tell(JoinAccepted(), self())
             }
         }
@@ -69,6 +73,10 @@ fun main() {
         fun handleFail(fail: Fail) {
             log().info("Received fail {} at {} from {}", fail, self().path().name(), sender.path().name())
             context.stop(self);
+        }
+
+        private fun getId(actor: ActorRef): Int {
+            return actor.path().name().toInt()
         }
 
         private fun inRing(): Boolean {
@@ -90,8 +98,8 @@ fun main() {
         actors.put(i, actor)
     }
 
-    actors.forEach { nodeId, node ->
-        val future = ask(node, InitActor(nodeId, actors.values.toList()), timeout.duration().toMillis())
+    actors.values.forEach { node ->
+        val future = ask(node, InitActor(actors.values.toList()), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
     }
 
