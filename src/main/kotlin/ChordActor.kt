@@ -10,13 +10,14 @@ import java.util.concurrent.TimeUnit
 
 fun main() {
 
-    data class InitActor(val successor: ActorRef)
+    data class InitActor(val prdc: ActorRef, val succList: List<ActorRef>)
     class InitActorCompleted
     class Fail
 
     class ChordActor : AbstractLoggingActor() {
 
-        private var successor: ActorRef? = null
+        private var prdc: ActorRef? = null
+        private lateinit var succList: MutableList<ActorRef>
 
         override fun createReceive() =
                 ReceiveBuilder()
@@ -26,7 +27,8 @@ fun main() {
 
         fun handleInitActor(init: InitActor) {
             log().info("Received init actor {} at {} from {}", init, self().path().name(), sender.path().name())
-            this.successor = init.successor
+            this.succList = init.succList.toMutableList()
+            this.prdc = init.prdc
             sender.tell(InitActorCompleted(), self())
         }
 
@@ -38,18 +40,19 @@ fun main() {
     }
 
     val system = ActorSystem.create("ChordSystem")
-    val n = 12
+    val n = 10
     val actors = mutableMapOf<Int, ActorRef>()
-    for (i in 0 until n) {
+    for (i in 0 until n step 2) {
         val actor = system.actorOf(Props.create(ChordActor::class.java), "" + i)
         actors.put(i, actor)
     }
 
     val timeout = Timeout(5, TimeUnit.SECONDS)
 
-    for (i in 0 until n) {
-        val actorSucc = actors.get((i + 1) % n)!!
-        val future = ask(actors.get(i), InitActor(actorSucc), timeout.duration().toMillis())
+    for (i in 0 until n step 2) {
+        val prdc = actors.get((n + i - 2) % n)!!
+        val succList = listOf(actors.get((i + 2) % n)!!, actors.get((i + 4) % n)!!)
+        val future = ask(actors.get(i), InitActor(prdc, succList), timeout.duration().toMillis())
         Await.result(future, timeout.duration())
     }
 
