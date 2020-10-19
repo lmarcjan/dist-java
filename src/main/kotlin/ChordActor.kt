@@ -40,10 +40,10 @@ fun main() {
                         .match(Fail::class.java) { handleFail(it) }
                         .build()
 
-        private fun handleJoinAccepted(newPrdc: JoinAccepted) {
+        private fun handleJoinAccepted(joinAccepted: JoinAccepted) {
             log().info("Join accepted at {} from {}", self().path().name(), sender.path().name())
-            this.prdc = newPrdc.prdc
-            this.succList = newPrdc.succList.toMutableList()
+            this.prdc = joinAccepted.prdc
+            this.succList = joinAccepted.succList.toMutableList()
         }
 
         fun handleInitActor(init: InitActor) {
@@ -60,7 +60,7 @@ fun main() {
 
         private fun handleJoin(join: Join) {
             if (inRing() && between(id, join.id, getId(succList.get(0)))) {
-                sender.tell(JoinAccepted(this.prdc!!, this.succList), self())
+                sender.tell(JoinAccepted(self(), this.succList), self())
             }
         }
 
