@@ -23,13 +23,13 @@ targetCompatibility = '1.8'
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java']
+            srcDirs = ['src/main/jvm', 'src/main/java']
         }
         kotlin {
-            srcDirs = ['src/main/kotlin']
+            srcDirs = ['src/main/jvm', 'src/main/kotlin']
         }
         scala {
-            srcDirs = ['src/main/scala']
+            srcDirs = ['src/main/jvm', 'src/main/scala']
         }
     }
 
