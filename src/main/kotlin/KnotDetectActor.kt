@@ -142,7 +142,7 @@ fun main() {
     }
 
     val system = ActorSystem.create("KnotDetectSystem")
-    val adj = GraphUtil.readGraphMatrixAsAdj(File(KnotDetectActor::class.java.getResource("graph-knot-detect.matrix").file))
+    val adj = GraphUtil.readGraphAdj(File(KnotDetectActor::class.java.getResource("graph-knot-detect.adj").file))
     val n = adj.size
     val actors = mutableMapOf<Int, ActorRef>()
     for (i in 1 until n + 1) {
