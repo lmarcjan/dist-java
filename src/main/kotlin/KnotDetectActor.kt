@@ -112,7 +112,7 @@ fun main() {
 
         fun check_waiting_from() {
             if (waiting_from.isEmpty()) {
-                log().info("Check waiting from at {}", self().path().name())
+                log().info("Empty waiting from at {}", self().path().name())
                 if (parent == self()) {
                     var candidates: MutableList<ActorRef> = mutableListOf()
                     in_cycle.toList().forEach { k ->
