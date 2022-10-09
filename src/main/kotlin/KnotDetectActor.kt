@@ -114,7 +114,7 @@ fun main() {
             if (waiting_from.isEmpty()) {
                 log().info("Empty waiting from at {}", self().path().name())
                 if (parent == self()) {
-                    val candidates: MutableList<ActorRef> = mutableListOf()
+                    val candidates: MutableSet<ActorRef> = mutableSetOf()
                     while (in_cycle.isNotEmpty()) {
                         val k = in_cycle.first()
                         in_cycle.remove(k)
